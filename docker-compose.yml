@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: docker.io/library/postgres:13
+    environment:
+      POSTGRES_USER: "root"
+      POSTGRES_PASSWORD: "root"
+      POSTGRES_DB: "rb2024"
+    ports:
+      - "5432:5432"
+  pgadmin:
+    image: docker.io/dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "jairoandre@gmail.com"
+      PGADMIN_DEFAULT_PASSWORD: "root"
+    depends_on:
+      - postgres
+    ports:
+      - "16543:80"
