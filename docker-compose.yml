@@ -6,8 +6,7 @@ services:
       POSTGRES_PASSWORD: "root"
       POSTGRES_DB: "rb2024"
     volumes:
-      - ./sql/ddl.sql:/docker-entrypoint-initdb.d/ddl.sql 
-      - ./sql/dml.sql:/docker-entrypoint-initdb.d/dml.sql 
+      - ./script.sql:/docker-entrypoint-initdb.d/ddl.sql 
     ports:
       - "5432:5432"
   pgadmin:
