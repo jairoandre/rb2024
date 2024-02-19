@@ -1,1 +1,6 @@
 **/target
+Dockerfile
+.env
+.gitignore
+**/.git
+Cargo.lock
