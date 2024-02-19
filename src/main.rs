@@ -25,7 +25,7 @@ async fn main() -> std::io::Result<()> {
             .configure(handlers::handlers::init_routes)
             .wrap(actix_web::middleware::Logger::default())
     })
-    .bind(("0.0.0.0", 8080))?
+    .bind(("0.0.0.0", 9999))?
     .run()
     .await
 }

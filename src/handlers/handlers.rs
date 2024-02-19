@@ -18,8 +18,8 @@ fn iso8601(st: &std::time::SystemTime) -> String {
 #[derive(Serialize, FromRow)]
 pub struct Client {
     pub id: i32,
-    pub account_limit: i32,
-    pub balance: i32,
+    pub account_limit: i64,
+    pub balance: i64,
 }
 
 
@@ -52,15 +52,15 @@ async fn get_client(state: Data<AppState>, path: Path<i32>) -> HttpResponse {
 
 #[derive(Deserialize)]
 pub struct TransactionPayload {
-    valor: i32,
+    valor: i64,
     tipo: String,
     descricao: String,
 }
 
 #[derive(Serialize)]
 pub struct TransactionResponse {
-    limite: i32,
-    saldo: i32,
+    limite: i64,
+    saldo: i64,
 }
 
 #[post("/{id}/transacoes")]
@@ -84,7 +84,7 @@ async fn post_transaction(
                     client.balance -= payload.valor;
                 }
                 _ => {
-                    return HttpResponse::BadRequest().body("Invalid operation");
+                    return HttpResponse::UnprocessableEntity().body("Invalid operation");
                 }
             }
             if (client.balance + client.account_limit) < 0 {
@@ -122,7 +122,7 @@ async fn post_transaction(
 
 #[derive(Serialize, FromRow)]
 struct LastTransaction {
-    valor: i32,
+    valor: i64,
     tipo: String,
     descricao: String,
     realizada_em: String,
@@ -136,9 +136,9 @@ struct GetLastTransactionsResponse {
 
 #[derive(Serialize)]
 struct Balance {
-    total: i32,
+    total: i64,
     data_extrato: String,
-    limite: i32,
+    limite: i64,
 }
 
 static LAST_TRANSACTION_SQL: &str = "
