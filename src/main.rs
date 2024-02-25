@@ -3,7 +3,9 @@ use env_logger::Env;
 use sqlx::{postgres::PgPoolOptions, Pool, Postgres};
 
 mod handlers;
+mod models;
 
+#[derive(Clone)]
 pub struct AppState {
     db: Pool<Postgres>,
 }
@@ -18,11 +20,11 @@ async fn main() -> std::io::Result<()> {
         .connect(&database_url)
         .await
         .expect("Error building a connection pool");
-
+    let state = AppState { db: pool };
     HttpServer::new(move || {
         App::new()
-            .app_data(Data::new(AppState { db: pool.clone() }))
-            .configure(handlers::handlers::init_routes)
+            .app_data(Data::new(state.clone()))
+            .configure(handlers::init_routes)
             .wrap(actix_web::middleware::Logger::default())
     })
     .bind(("0.0.0.0", 9999))?
