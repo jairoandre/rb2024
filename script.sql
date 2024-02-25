@@ -13,7 +13,8 @@ CREATE TABLE transactions(
   transaction_type VARCHAR(1) NOT NULL,
   details VARCHAR(10) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT "fk_clients" FOREIGN KEY ("client_id") REFERENCES "clients" ("id")
+  CONSTRAINT "fk_clients" FOREIGN KEY ("client_id") REFERENCES "clients" ("id"),
+  CONSTRAINT c_details CHECK (transactions.details <> '')
 );
 
 CREATE VIEW last_transactions AS SELECT 

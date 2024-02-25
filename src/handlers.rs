@@ -26,6 +26,10 @@ async fn post_transaction(
         "d" => payload.valor * -1,
         _ => return HttpResponse::UnprocessableEntity().body("Invalid operation"),
     };
+    let desc = match &payload.descricao {
+        Some(d) => d.clone(),
+        None => return HttpResponse::UnprocessableEntity().body("Description is mandatory"),
+    };
     let mut conn = state.db.acquire().await.unwrap();
     let mut tx = conn.begin().await.unwrap();
     // lock the row for updates
@@ -44,7 +48,7 @@ async fn post_transaction(
                 .bind(client.id)
                 .bind(payload.valor)
                 .bind(payload.tipo.clone())
-                .bind(payload.descricao.clone())
+                .bind(desc)
                 .execute(&mut *tx)
                 .await {
                     Ok(_) =>  {
@@ -53,9 +57,8 @@ async fn post_transaction(
                         limite: client.account_limit,
                         saldo: client.balance
                     })},
-                    Err(e) => {
+                    Err(_) => {
                         let _ = tx.rollback().await.unwrap();
-                        println!("{}", e);
                         HttpResponse::UnprocessableEntity().body("Internal server error")
                      }
                 }
@@ -68,10 +71,10 @@ async fn post_transaction(
 }
 
 static LAST_TRANSACTION_SQL: &str = "
-select 
-lt.amount as valor, 
-lt.transaction_type as tipo, 
-lt.details as descricao, 
+select
+lt.amount as valor,
+lt.transaction_type as tipo,
+lt.details as descricao,
 to_char(lt.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS.MSZ') as realizada_em
 from last_transactions lt where lt.client_id = $1;
 ";
@@ -90,16 +93,14 @@ async fn get_extract(state: Data<AppState>, path: Path<i32>) -> HttpResponse {
                 .fetch_all(&state.db)
                 .await
             {
-                Ok(last_transactions) => {
-                    HttpResponse::Ok().json(GetLastTransactionsResponse {
-                        saldo: Balance {
-                            total: client.balance,
-                            data_extrato: iso8601(&SystemTime::now()),
-                            limite: client.account_limit,
-                        },
-                        ultimas_transacoes: last_transactions,
-                    })
-                }
+                Ok(last_transactions) => HttpResponse::Ok().json(GetLastTransactionsResponse {
+                    saldo: Balance {
+                        total: client.balance,
+                        data_extrato: iso8601(&SystemTime::now()),
+                        limite: client.account_limit,
+                    },
+                    ultimas_transacoes: last_transactions,
+                }),
                 Err(_) => {
                     HttpResponse::InternalServerError().body("Could not load last transactions")
                 }

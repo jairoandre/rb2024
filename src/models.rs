@@ -12,7 +12,7 @@ pub struct Client {
 pub struct TransactionPayload {
     pub valor: i64,
     pub tipo: String,
-    pub descricao: String,
+    pub descricao: Option<String>,
 }
 
 #[derive(Serialize)]
