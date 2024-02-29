@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
     println!("Trying to connect to the database: {}", &database_url);
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     let pool = PgPoolOptions::new()
-        .max_connections(5)
+        .max_connections(10)
         .connect(&database_url)
         .await
         .expect("Error building a connection pool");

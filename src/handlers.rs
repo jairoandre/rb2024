@@ -30,53 +30,63 @@ async fn post_transaction(
         Some(d) => d.clone(),
         None => return HttpResponse::UnprocessableEntity().body("Description is mandatory"),
     };
+    if desc.is_empty() {
+        return HttpResponse::UnprocessableEntity().body("Description is mandatory");
+    }
     let mut conn = state.db.acquire().await.unwrap();
     let mut tx = conn.begin().await.unwrap();
     // lock the row for updates
-    let _ = sqlx::query("SELECT * FROM clients WHERE id = $1 FOR UPDATE")
-        .bind(client_id)
-        .execute(&mut *tx)
-        .await
-        .unwrap();
-    match sqlx::query_as::<_, Client>("UPDATE clients SET balance = (balance + $1) WHERE id = $2 RETURNING *")
-        .bind(amount)
+    match sqlx::query_as::<_, Client>("SELECT * FROM clients WHERE id = $1 FOR UPDATE")
         .bind(client_id)
         .fetch_one(&mut *tx)
-        .await {
-            Ok(client) => {
-                match sqlx::query("INSERT INTO transactions (client_id, amount, transaction_type, details) VALUES ($1, $2, $3, $4)")
-                .bind(client.id)
-                .bind(payload.valor)
-                .bind(payload.tipo.clone())
-                .bind(desc)
-                .execute(&mut *tx)
-                .await {
-                    Ok(_) =>  {
-                        let _ = tx.commit().await.unwrap();
-                        HttpResponse::Ok().json(TransactionResponse {
-                        limite: client.account_limit,
-                        saldo: client.balance
-                    })},
-                    Err(_) => {
-                        let _ = tx.rollback().await.unwrap();
-                        HttpResponse::UnprocessableEntity().body("Internal server error")
-                     }
-                }
-            },
-            Err(_) => {
-                let _ = tx.rollback().await.unwrap();
-                HttpResponse::UnprocessableEntity().body("Invalid operation")
+        .await
+    {
+        Ok(c) => {
+            let new_balance = c.balance + amount;
+            if (new_balance + c.account_limit) < 0 {
+                return HttpResponse::UnprocessableEntity().body("Limit reached");
             }
+            let _ = sqlx::query("UPDATE clients SET balance = $1 WHERE id = $2")
+                .bind(new_balance)
+                .bind(c.id)
+                .execute(&mut *tx)
+                .await
+                .unwrap();
+            match sqlx::query("INSERT INTO transactions (client_id, amount, transaction_type, details) VALUES ($1, $2, $3, $4)")
+                    .bind(c.id)
+                    .bind(payload.valor)
+                    .bind(payload.tipo.clone())
+                    .bind(desc)
+                    .execute(&mut *tx)
+                    .await {
+                        Ok(_) => {
+                            let _ = tx.commit().await.unwrap();
+                            let response = TransactionResponse {
+                                limite: c.account_limit,
+                                saldo: new_balance,
+                            };
+                            HttpResponse::Ok().json(response)
+                        },
+                        Err(_) => {
+                            let _ = tx.rollback().await.unwrap();
+                            HttpResponse::UnprocessableEntity().body("Internal server error")
+                        }
+                    }
+        }
+        Err(_) => {
+            let _ = tx.rollback().await.unwrap();
+            HttpResponse::UnprocessableEntity().body("Internal server error")
+        }
     }
 }
 
 static LAST_TRANSACTION_SQL: &str = "
-select
-lt.amount as valor,
-lt.transaction_type as tipo,
-lt.details as descricao,
-to_char(lt.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS.MSZ') as realizada_em
-from last_transactions lt where lt.client_id = $1;
+SELECT
+tx.amount AS valor,
+tx.transaction_type AS tipo,
+tx.details AS descricao,
+TO_CHAR(tx.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SS.MSZ') AS realizada_em
+FROM transactions tx WHERE tx.client_id = $1 ORDER BY tx.created_at DESC LIMIT 10;
 ";
 
 #[get("/{id}/extrato")]
