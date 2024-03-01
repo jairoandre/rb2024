@@ -305,16 +305,16 @@ class RinhaBackendCrebitosSimulation
         atOnceUsers(1)
       ).andThen(
         debitos.inject(
-          rampUsersPerSec(1).to(220).during(10.seconds),
-          constantUsersPerSec(220).during(10.seconds)
+          rampUsersPerSec(1).to(220).during(2.minutes),
+          constantUsersPerSec(220).during(2.minutes)
         ),
         creditos.inject(
-          rampUsersPerSec(1).to(110).during(10.seconds),
-          constantUsersPerSec(110).during(10.seconds)
+          rampUsersPerSec(1).to(110).during(2.minutes),
+          constantUsersPerSec(110).during(2.minutes)
         ),
         extratos.inject(
-          rampUsersPerSec(1).to(10).during(10.seconds),
-          constantUsersPerSec(10).during(10.seconds)
+          rampUsersPerSec(1).to(10).during(2.minutes),
+          constantUsersPerSec(10).during(2.minutes)
         )
       )
     )
